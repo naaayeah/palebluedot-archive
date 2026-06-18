@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Planet } from '@/lib/types'
+import type * as THREE_TYPES from 'three'
 
 function seededRng(id: string, salt: number): number {
   let h = salt * 2654435761
@@ -111,7 +112,7 @@ export default function SpaceSimulator({ planets }: Props) {
       // 텍스처 로더
       const texLoader = new THREE.TextureLoader()
 
-      function loadTex(url: string): Promise<THREE.Texture | null> {
+      function loadTex(url: string): Promise<import('three').Texture | null> {
         return new Promise((resolve) => {
           // 프록시로 CORS 우회: Next.js API 통해 로드
           texLoader.load(
@@ -133,8 +134,8 @@ export default function SpaceSimulator({ planets }: Props) {
       }
 
       type Entry = {
-        mesh: THREE.Mesh
-        rings: THREE.Mesh[]        // scene 직속 링 (행성 회전과 독립)
+        mesh: THREE_TYPES.Mesh
+        rings: THREE_TYPES.Mesh[]        // scene 직속 링 (행성 회전과 독립)
         baseY: number
         bobPhase: number
         rotSpeed: number
@@ -143,7 +144,7 @@ export default function SpaceSimulator({ planets }: Props) {
         subtitle: string
       }
       const entries: Entry[] = []
-      const clickTargets: THREE.Mesh[] = []
+      const clickTargets: THREE_TYPES.Mesh[] = []
 
       for (let i = 0; i < planets.length; i++) {
         const planet = planets[i]
@@ -164,7 +165,7 @@ export default function SpaceSimulator({ planets }: Props) {
         }
 
         // 텍스처 로드 — 프록시 경유로 CORS 완전 우회
-        let texture: THREE.Texture | null = null
+        let texture: THREE_TYPES.Texture | null = null
         if (planet.texture_url) {
           const proxyUrl = `/api/texture-proxy?url=${encodeURIComponent(planet.texture_url)}`
           texture = await loadTex(proxyUrl)
@@ -194,7 +195,7 @@ export default function SpaceSimulator({ planets }: Props) {
         ))
 
         // ── 링: scene 직속으로 추가, 행성 회전과 완전 독립 ──
-        const planetRings: THREE.Mesh[] = []
+        const planetRings: THREE_TYPES.Mesh[] = []
         if (s4 > 0.55) {
           // RingGeometry = 납작한 띠 (토러스 아님)
           const inner = size * (1.6 + s0 * 0.4)
@@ -236,7 +237,7 @@ export default function SpaceSimulator({ planets }: Props) {
       let idleTimer: ReturnType<typeof setTimeout> | null = null
 
       function onMouseMove(e: MouseEvent) {
-        const rect = mount.getBoundingClientRect()
+        const rect = mount!.getBoundingClientRect()
         mouse.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1
         mouse.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1
         raycaster.setFromCamera(mouse, camera)
@@ -259,7 +260,7 @@ export default function SpaceSimulator({ planets }: Props) {
       }
 
       function onClick(e: MouseEvent) {
-        const rect = mount.getBoundingClientRect()
+        const rect = mount!.getBoundingClientRect()
         mouse.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1
         mouse.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1
         raycaster.setFromCamera(mouse, camera)
@@ -268,7 +269,7 @@ export default function SpaceSimulator({ planets }: Props) {
       }
 
       function onResize() {
-        const w = mount.clientWidth, h = mount.clientHeight
+        const w = mount!.clientWidth, h = mount!.clientHeight
         camera.aspect = w / h
         camera.updateProjectionMatrix()
         renderer.setSize(w, h)
