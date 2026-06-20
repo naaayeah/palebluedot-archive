@@ -31,6 +31,13 @@ export interface PlanetPhoto {
   planets?: { name: string }
 }
 
+export interface VisitorSelfie {
+  id: string
+  image_url: string
+  storage_path: string | null
+  created_at: string
+}
+
 export interface VisitorLog {
   id: string
   page: string
