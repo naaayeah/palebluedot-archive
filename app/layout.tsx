@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import ClickSound from '@/components/public/ClickSound'
 
 export const metadata: Metadata = {
   title: 'Pale Blue Dot Archive',
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-screen bg-space-void text-space-text antialiased">
+        <ClickSound />
         {children}
       </body>
     </html>

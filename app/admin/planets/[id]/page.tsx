@@ -28,7 +28,7 @@ function UploadSection({
   desc: string
   accept: string
   currentUrl: string | null
-  previewType: 'image' | 'video'
+  previewType: 'image' | 'video' | 'audio'
   uploadLabel: string
   onUpload: (file: File) => Promise<void>
   onDelete: () => Promise<void>
@@ -80,22 +80,32 @@ function UploadSection({
         {/* 현재 */}
         <div className="shrink-0">
           <p className="label mb-2">현재</p>
-          <div className="w-28 h-28 rounded-xl overflow-hidden border border-space-border bg-space-surface flex items-center justify-center">
-            {currentUrl ? (
-              previewType === 'image' ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={`/api/texture-proxy?url=${encodeURIComponent(currentUrl)}`}
-                  alt="current"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <video src={currentUrl} className="w-full h-full object-cover" muted playsInline />
-              )
+          {previewType === 'audio' ? (
+            currentUrl ? (
+              <audio src={currentUrl} controls className="w-64 h-10" />
             ) : (
-              <span className="text-xs text-space-muted/50">없음</span>
-            )}
-          </div>
+              <div className="w-64 h-10 rounded-lg border border-space-border bg-space-surface flex items-center px-3">
+                <span className="text-xs text-space-muted/50">없음</span>
+              </div>
+            )
+          ) : (
+            <div className="w-28 h-28 rounded-xl overflow-hidden border border-space-border bg-space-surface flex items-center justify-center">
+              {currentUrl ? (
+                previewType === 'image' ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`/api/texture-proxy?url=${encodeURIComponent(currentUrl)}`}
+                    alt="current"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <video src={currentUrl} className="w-full h-full object-cover" muted playsInline />
+                )
+              ) : (
+                <span className="text-xs text-space-muted/50">없음</span>
+              )}
+            </div>
+          )}
           {currentUrl && (
             <button onClick={handleDelete} disabled={loading}
               className="mt-2 text-xs text-space-danger hover:opacity-70 transition-opacity">
@@ -108,14 +118,18 @@ function UploadSection({
         {preview && (
           <div className="shrink-0">
             <p className="label mb-2">미리보기</p>
-            <div className="w-28 h-28 rounded-xl overflow-hidden border-2 border-space-blue/40 bg-space-surface">
-              {previewType === 'image' ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={preview} alt="preview" className="w-full h-full object-cover" />
-              ) : (
-                <video src={preview} className="w-full h-full object-cover" muted playsInline autoPlay loop />
-              )}
-            </div>
+            {previewType === 'audio' ? (
+              <audio src={preview} controls className="w-64 h-10" />
+            ) : (
+              <div className="w-28 h-28 rounded-xl overflow-hidden border-2 border-space-blue/40 bg-space-surface">
+                {previewType === 'image' ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={preview} alt="preview" className="w-full h-full object-cover" />
+                ) : (
+                  <video src={preview} className="w-full h-full object-cover" muted playsInline autoPlay loop />
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -194,10 +208,24 @@ export default function PlanetEditPage() {
     setPlanet(p => p ? { ...p, bg_video_url: null } : p)
   }
 
+  async function uploadSound(file: File) {
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch(`/api/admin/planets/${id}/sound`, { method: 'POST', body: fd })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error)
+    setPlanet(p => p ? { ...p, sound_url: data.sound_url } : p)
+  }
+
+  async function deleteSound() {
+    await fetch(`/api/admin/planets/${id}/sound`, { method: 'DELETE' })
+    setPlanet(p => p ? { ...p, sound_url: null } : p)
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true); setError(''); setSaved(false)
-    const { id: _id, created_at: _ca, texture_url: _tx, bg_video_url: _bv, ...payload } = form as Planet
+    const { id: _id, created_at: _ca, texture_url: _tx, bg_video_url: _bv, sound_url: _sd, ...payload } = form as Planet
     const res = await fetch(`/api/admin/planets/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -257,6 +285,18 @@ export default function PlanetEditPage() {
         uploadLabel="배경 영상 적용"
         onUpload={uploadVideo}
         onDelete={deleteVideo}
+      />
+
+      {/* ── 행성 사운드 ── */}
+      <UploadSection
+        title="Planet Sound"
+        desc="행성 입장 시 재생되는 배경 사운드 · 최대 50MB · MP3/WAV/OGG/MP4(M4A). 미등록 시: 배경영상 사운드 → 홈 사운드 순으로 재생"
+        accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4,audio/x-m4a,video/mp4"
+        currentUrl={planet.sound_url}
+        previewType="audio"
+        uploadLabel="사운드 적용"
+        onUpload={uploadSound}
+        onDelete={deleteSound}
       />
 
       {/* ── 텍스트 정보 ── */}

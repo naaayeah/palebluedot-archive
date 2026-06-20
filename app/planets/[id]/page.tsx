@@ -3,49 +3,43 @@ import Link from 'next/link'
 import { createAnonClient } from '@/lib/supabase-server'
 import StarField from '@/components/public/StarField'
 import PlanetInteractions from '@/components/public/PlanetInteractions'
+import PlanetMedia from '@/components/public/PlanetMedia'
 import type { Planet, PlanetMessage, PlanetPhoto } from '@/lib/types'
 
 interface Props { params: { id: string } }
 
 async function getData(id: string) {
   const supabase = createAnonClient()
-  const [{ data: planet }, { data: messages }, { data: photos }] = await Promise.all([
+  const [{ data: planet }, { data: messages }, { data: photos }, { data: settings }] = await Promise.all([
     supabase.from('planets').select('*').eq('id', id).eq('is_visible', true).single(),
     supabase.from('planet_messages').select('*').eq('planet_id', id).eq('is_hidden', false)
       .order('created_at', { ascending: false }).limit(50),
     supabase.from('planet_photos').select('*').eq('planet_id', id).eq('is_hidden', false)
       .order('created_at', { ascending: false }).limit(24),
+    supabase.from('site_settings').select('home_sound_url').eq('id', 1).maybeSingle(),
   ])
   return {
     planet: planet as Planet | null,
     messages: (messages as PlanetMessage[]) ?? [],
     photos: (photos as PlanetPhoto[]) ?? [],
+    homeSoundUrl: (settings?.home_sound_url as string | null) ?? null,
   }
 }
 
 export const revalidate = 30
 
 export default async function PlanetPage({ params }: Props) {
-  const { planet, messages, photos } = await getData(params.id)
+  const { planet, messages, photos, homeSoundUrl } = await getData(params.id)
   if (!planet) notFound()
 
   return (
     <main className="relative min-h-screen bg-[#020208]">
-      {/* ── 배경 영상 ── */}
-      {planet.bg_video_url && (
-        <>
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="fixed inset-0 w-full h-full object-cover z-0"
-            src={planet.bg_video_url}
-          />
-          {/* 가독성을 위한 어두운 오버레이 */}
-          <div className="fixed inset-0 z-[1] bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
-        </>
-      )}
+      {/* ── 배경 영상 + 사운드 ── */}
+      <PlanetMedia
+        bgVideoUrl={planet.bg_video_url}
+        soundUrl={planet.sound_url}
+        homeSoundUrl={homeSoundUrl}
+      />
 
       {/* 배경 영상 없을 때 별 */}
       {!planet.bg_video_url && <StarField count={200} />}

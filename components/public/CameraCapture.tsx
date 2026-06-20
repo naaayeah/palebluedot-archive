@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useEffect, useCallback } from 'react'
+import { playBeep, playShutter } from '@/lib/sfx'
 
 type Stage = 'idle' | 'preview' | 'countdown' | 'result'
 
@@ -48,13 +49,17 @@ export default function CameraCapture() {
   function startCountdown() {
     setStage('countdown')
     setCountdown(3)
+    playBeep(660)
     let c = 3
     const iv = setInterval(() => {
       c -= 1
       setCountdown(c)
       if (c <= 0) {
         clearInterval(iv)
+        playShutter()
         capture()
+      } else {
+        playBeep(c === 1 ? 990 : 660)
       }
     }, 1000)
   }
@@ -90,8 +95,8 @@ export default function CameraCapture() {
   function drawSpaceResult() {
     const canvas = resultCanvasRef.current
     if (!canvas) return
-    const W = canvas.width = 800
-    const H = canvas.height = 500
+    const W = canvas.width = 1600
+    const H = canvas.height = 1000
     const ctx = canvas.getContext('2d')!
 
     // 배경: 칠흑 우주
@@ -99,10 +104,10 @@ export default function CameraCapture() {
     ctx.fillRect(0, 0, W, H)
 
     // 별 뿌리기
-    for (let i = 0; i < 1200; i++) {
+    for (let i = 0; i < 3000; i++) {
       const x = Math.random() * W
       const y = Math.random() * H
-      const r = Math.random() * 1.4
+      const r = Math.random() * 2.6
       const op = 0.4 + Math.random() * 0.6
       ctx.beginPath()
       ctx.arc(x, y, r, 0, Math.PI * 2)
@@ -113,47 +118,47 @@ export default function CameraCapture() {
     // 은하 글로우 (중심)
     const cx = W * (0.3 + Math.random() * 0.4)
     const cy = H * (0.3 + Math.random() * 0.4)
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 160)
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 320)
     grad.addColorStop(0, 'rgba(180,160,255,0.22)')
     grad.addColorStop(0.3, 'rgba(120,100,200,0.12)')
     grad.addColorStop(0.7, 'rgba(60,80,160,0.06)')
     grad.addColorStop(1, 'rgba(0,0,0,0)')
     ctx.fillStyle = grad
     ctx.beginPath()
-    ctx.ellipse(cx, cy, 160, 80, Math.PI * 0.3, 0, Math.PI * 2)
+    ctx.ellipse(cx, cy, 320, 160, Math.PI * 0.3, 0, Math.PI * 2)
     ctx.fill()
 
     // 은하 코어
-    const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, 30)
+    const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, 60)
     core.addColorStop(0, 'rgba(255,240,200,0.5)')
     core.addColorStop(0.5, 'rgba(200,180,255,0.2)')
     core.addColorStop(1, 'rgba(0,0,0,0)')
     ctx.fillStyle = core
     ctx.beginPath()
-    ctx.ellipse(cx, cy, 30, 14, Math.PI * 0.3, 0, Math.PI * 2)
+    ctx.ellipse(cx, cy, 60, 28, Math.PI * 0.3, 0, Math.PI * 2)
     ctx.fill()
 
     // "You are here" 위치: 은하 외곽 랜덤
     const angle = Math.random() * Math.PI * 2
-    const dist = 100 + Math.random() * 120
+    const dist = 200 + Math.random() * 240
     const ax = cx + Math.cos(angle) * dist
     const ay = cy + Math.sin(angle) * dist * 0.5
 
     // 화살표 그리기
-    const arrowLen = 55 + Math.random() * 30
+    const arrowLen = 110 + Math.random() * 60
     const arrowAngle = angle + Math.PI + (Math.random() - 0.5) * 0.6
     const tx = ax + Math.cos(arrowAngle) * arrowLen
     const ty = ay + Math.sin(arrowAngle) * arrowLen
 
     ctx.strokeStyle = 'rgba(255,255,255,0.9)'
-    ctx.lineWidth = 1.5
+    ctx.lineWidth = 3
     ctx.beginPath()
     ctx.moveTo(ax, ay)
     ctx.lineTo(tx, ty)
     ctx.stroke()
 
     // 화살촉
-    const headLen = 9
+    const headLen = 18
     const headAngle = 0.4
     ctx.beginPath()
     ctx.moveTo(ax, ay)
@@ -169,17 +174,17 @@ export default function CameraCapture() {
     ctx.stroke()
 
     // "YOU ARE HERE" 텍스트
-    ctx.font = 'bold 13px Arial, sans-serif'
-    ctx.fillStyle = 'rgba(255,255,255,0.92)'
-    ctx.letterSpacing = '2px'
+    ctx.font = 'bold 28px Arial, sans-serif'
+    ctx.fillStyle = 'rgba(255,255,255,0.95)'
+    ;(ctx as any).letterSpacing = '4px'
     const label = 'YOU ARE HERE.'
     const textW = ctx.measureText(label).width
     // 텍스트 위치: 화살표 끝 근처
-    const lx = tx + Math.cos(arrowAngle) * 14
-    const ly = ty + Math.sin(arrowAngle) * 14
+    const lx = tx + Math.cos(arrowAngle) * 28
+    const ly = ty + Math.sin(arrowAngle) * 28
     // 화면 경계 보정
-    const finalX = Math.max(textW / 2 + 10, Math.min(W - textW / 2 - 10, lx))
-    const finalY = Math.max(20, Math.min(H - 10, ly))
+    const finalX = Math.max(textW / 2 + 20, Math.min(W - textW / 2 - 20, lx))
+    const finalY = Math.max(40, Math.min(H - 20, ly))
     ctx.fillText(label, finalX - textW / 2, finalY)
   }
 
@@ -214,8 +219,8 @@ export default function CameraCapture() {
 
       {/* camera preview */}
       {(stage === 'preview' || stage === 'countdown') && (
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative w-full max-w-lg aspect-video rounded-2xl overflow-hidden border border-space-border bg-black">
+        <div className="flex flex-col items-center gap-5">
+          <div className="relative w-full max-w-4xl aspect-video rounded-2xl overflow-hidden border border-space-border bg-black">
             <video
               ref={videoRef}
               autoPlay
@@ -226,7 +231,7 @@ export default function CameraCapture() {
             {stage === 'countdown' && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                 <span
-                  className="text-8xl text-white font-bold"
+                  className="text-[10rem] text-white font-bold"
                   style={{ fontFamily: '"Times New Roman", Georgia, serif', fontStyle: 'italic' }}
                 >
                   {countdown}
@@ -243,7 +248,7 @@ export default function CameraCapture() {
           {stage === 'preview' && (
             <div className="flex gap-3">
               <button onClick={startCountdown} className="btn-primary px-8 py-3">
-                📸 촬영
+                촬영
               </button>
               <button onClick={() => { stopCamera(); reset() }} className="btn-ghost text-sm px-5">
                 취소
@@ -275,15 +280,14 @@ export default function CameraCapture() {
             <p className="text-xs tracking-[0.3em] text-space-blue uppercase mb-2">Transmission Received</p>
             <p className="text-sm text-space-muted">우주에서 당신을 발견했습니다.</p>
           </div>
-          <div className="w-full max-w-2xl rounded-2xl overflow-hidden border border-space-border">
+          <div className="w-full max-w-4xl rounded-2xl overflow-hidden border border-space-border">
             <canvas
               ref={resultCanvasRef}
               className="w-full"
-              style={{ imageRendering: 'pixelated' }}
             />
           </div>
           <p className="text-xs text-space-muted/60 text-center">
-            실제 촬영된 사진은 아래 방명록에서 확인하세요
+            실제 촬영된 사진은 방명록(Guestbook)에서 확인하세요
           </p>
           <button onClick={reset} className="btn-ghost text-sm px-6">
             다시 찍기

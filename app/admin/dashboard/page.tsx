@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { AdminStats } from '@/lib/types'
+import HomeSoundSettings from '@/components/admin/HomeSoundSettings'
 
 function BarChart({ data }: { data: { label: string; value: number }[] }) {
   const max = Math.max(...data.map((d) => d.value), 1)
@@ -116,6 +117,9 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
+
+          {/* Home sound settings */}
+          <HomeSoundSettings />
 
           {/* System status */}
           <div className="glass-panel p-6">

@@ -39,9 +39,9 @@ const PALETTES = [
 ]
 
 interface Tooltip { name: string; subtitle: string; x: number; y: number }
-interface Props { planets: Planet[] }
+interface Props { planets: Planet[]; showOverlay?: boolean }
 
-export default function SpaceSimulator({ planets }: Props) {
+export default function SpaceSimulator({ planets, showOverlay = true }: Props) {
   const mountRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const [tooltip, setTooltip] = useState<Tooltip | null>(null)
@@ -320,19 +320,23 @@ export default function SpaceSimulator({ planets }: Props) {
 
   return (
     <div ref={mountRef} className="relative w-full h-full" style={{ cursor: 'grab' }}>
-      <div className="absolute top-8 left-1/2 -translate-x-1/2 text-center pointer-events-none z-10 select-none">
-        <p className="text-xs tracking-[0.45em] text-space-blue/50 uppercase mb-3">Planetary Archive</p>
-        <h1
-          className="text-5xl md:text-7xl text-white leading-tight drop-shadow-lg"
-          style={{ fontFamily: '"Times New Roman", Georgia, Times, serif', fontStyle: 'italic', fontWeight: 'bold' }}
-        >
-          Pale Blue Dot
-        </h1>
-      </div>
+      {showOverlay && (
+        <>
+          <div className="absolute top-8 left-1/2 -translate-x-1/2 text-center pointer-events-none z-10 select-none">
+            <p className="text-xs tracking-[0.45em] text-space-blue/50 uppercase mb-3">Planetary Archive</p>
+            <h1
+              className="text-5xl md:text-7xl text-white leading-tight drop-shadow-lg"
+              style={{ fontFamily: '"Times New Roman", Georgia, Times, serif', fontStyle: 'italic', fontWeight: 'bold' }}
+            >
+              Pale Blue Dot
+            </h1>
+          </div>
 
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-none z-10 select-none">
-        <p className="text-xs text-white/20 tracking-[0.2em]">drag · zoom · click to enter</p>
-      </div>
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-none z-10 select-none">
+            <p className="text-xs text-white/20 tracking-[0.2em]">drag · zoom · click to enter</p>
+          </div>
+        </>
+      )}
 
       {tooltip && (
         <div className="fixed z-20 pointer-events-none" style={{ left: tooltip.x + 20, top: tooltip.y - 28 }}>

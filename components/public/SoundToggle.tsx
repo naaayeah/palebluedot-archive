@@ -1,88 +1,45 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { getCtx, createDrone } from '@/lib/sfx'
 
-// Web Audio API로 우주 앰비언트 드론 사운드 생성 (음원 파일 불필요)
+// 홈 배경 사운드 토글. 어드민에서 업로드한 파일이 있으면 그 파일을, 없으면 생성 드론을 재생
 export default function SoundToggle() {
   const [on, setOn] = useState(false)
-  const ctxRef = useRef<AudioContext | null>(null)
-  const nodesRef = useRef<{ master: GainNode; stop: () => void } | null>(null)
+  const soundUrlRef = useRef<string | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const stopDroneRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
+    fetch('/api/public/settings')
+      .then(r => r.json())
+      .then(d => { soundUrlRef.current = d.home_sound_url ?? null })
+      .catch(() => {})
     return () => {
-      nodesRef.current?.stop()
-      ctxRef.current?.close().catch(() => {})
+      stopDroneRef.current?.()
+      audioRef.current?.pause()
     }
   }, [])
 
-  function buildAmbient(ctx: AudioContext) {
-    const master = ctx.createGain()
-    master.gain.value = 0
-    master.connect(ctx.destination)
-
-    // 부드러운 로우패스 필터
-    const filter = ctx.createBiquadFilter()
-    filter.type = 'lowpass'
-    filter.frequency.value = 600
-    filter.Q.value = 0.6
-    filter.connect(master)
-
-    // 여러 디튠된 오실레이터로 깊은 드론
-    const freqs = [55, 82.5, 110, 164.8]
-    const oscs: OscillatorNode[] = []
-    freqs.forEach((f, i) => {
-      const osc = ctx.createOscillator()
-      osc.type = i % 2 === 0 ? 'sine' : 'triangle'
-      osc.frequency.value = f
-      osc.detune.value = (i - 1.5) * 6
-
-      const g = ctx.createGain()
-      g.gain.value = 0.18 / freqs.length
-      osc.connect(g)
-      g.connect(filter)
-      osc.start()
-      oscs.push(osc)
-    })
-
-    // 느린 LFO로 필터 흔들기 (살아있는 느낌)
-    const lfo = ctx.createOscillator()
-    lfo.frequency.value = 0.06
-    const lfoGain = ctx.createGain()
-    lfoGain.gain.value = 220
-    lfo.connect(lfoGain)
-    lfoGain.connect(filter.frequency)
-    lfo.start()
-
-    // 페이드 인
-    master.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 2)
-
-    const stop = () => {
-      try {
-        master.gain.cancelScheduledValues(ctx.currentTime)
-        master.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.6)
-        setTimeout(() => {
-          oscs.forEach(o => { try { o.stop() } catch {} })
-          try { lfo.stop() } catch {}
-        }, 700)
-      } catch {}
-    }
-
-    return { master, stop }
-  }
-
   async function toggle() {
     if (on) {
-      nodesRef.current?.stop()
-      nodesRef.current = null
+      stopDroneRef.current?.()
+      stopDroneRef.current = null
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
       setOn(false)
       return
     }
-    if (!ctxRef.current) {
-      ctxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+
+    if (soundUrlRef.current) {
+      const audio = new Audio(soundUrlRef.current)
+      audio.loop = true
+      audio.volume = 0.6
+      audio.play().catch(() => {})
+      audioRef.current = audio
+    } else {
+      const ctx = getCtx()
+      if (ctx) stopDroneRef.current = createDrone(ctx)
     }
-    const ctx = ctxRef.current
-    if (ctx.state === 'suspended') await ctx.resume()
-    nodesRef.current = buildAmbient(ctx)
     setOn(true)
   }
 

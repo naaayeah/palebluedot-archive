@@ -8,8 +8,14 @@ export interface Planet {
   video_url: string | null
   texture_url: string | null
   bg_video_url: string | null
+  sound_url: string | null
   is_visible: boolean
   created_at: string
+}
+
+export interface SiteSettings {
+  id: number
+  home_sound_url: string | null
 }
 
 export interface PlanetMessage {

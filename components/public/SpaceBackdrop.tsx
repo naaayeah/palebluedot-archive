@@ -9,10 +9,11 @@ const SpaceSimulator = dynamic(() => import('./SpaceSimulator'), { ssr: false })
 export default function SpaceBackdrop({ planets }: { planets: Planet[] }) {
   return (
     <div aria-hidden className="fixed inset-0 z-0 pointer-events-none select-none">
-      <div className="absolute inset-0 opacity-40">
-        <SpaceSimulator planets={planets} />
+      <div className="absolute inset-0">
+        <SpaceSimulator planets={planets} showOverlay={false} />
       </div>
-      <div className="absolute inset-0 bg-[#020208]/80" />
+      {/* 살짝만 어둡게 — 글래스 패널이 그 위에 올라감 */}
+      <div className="absolute inset-0 bg-[#020208]/30" />
     </div>
   )
 }
