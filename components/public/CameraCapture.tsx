@@ -192,10 +192,10 @@ export default function CameraCapture() {
           <div className="text-center">
             <p className="text-xs tracking-[0.3em] text-space-blue uppercase mb-3">Space Camera</p>
             <h2
-              className="text-3xl text-space-text mb-3"
+              className="text-4xl text-space-text mb-3"
               style={{ fontFamily: '"Times New Roman", Georgia, serif', fontStyle: 'italic', fontWeight: 'bold' }}
             >
-              우주에서 찍어드립니다
+              You Are Here
             </h2>
             <p className="text-sm text-space-muted max-w-sm mx-auto leading-relaxed">
               광활한 우주 어딘가에서 당신을 찾아 카메라를 겨눕니다.

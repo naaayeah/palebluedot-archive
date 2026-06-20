@@ -34,12 +34,12 @@ export default function Guestbook() {
       <div className="text-center mb-8">
         <p className="text-xs tracking-[0.3em] text-space-blue uppercase mb-3">Archive Records</p>
         <h2
-          className="text-4xl text-space-text"
+          className="text-5xl text-space-text"
           style={{ fontFamily: '"Times New Roman", Georgia, serif', fontStyle: 'italic', fontWeight: 'bold' }}
         >
-          방명록
+          Guestbook
         </h2>
-        <p className="text-sm text-space-muted mt-2">우주를 다녀간 이들의 흔적</p>
+        <p className="text-sm text-space-muted mt-3">우주를 다녀간 이들의 흔적</p>
       </div>
 
       {/* 탭 */}
