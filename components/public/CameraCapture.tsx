@@ -23,6 +23,14 @@ export default function CameraCapture() {
 
   useEffect(() => () => stopCamera(), [stopCamera])
 
+  // 비디오 요소가 DOM에 렌더된 뒤 스트림 연결 (idle 상태엔 video가 없음)
+  useEffect(() => {
+    if ((stage === 'preview' || stage === 'countdown') && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current
+      videoRef.current.play().catch(() => {})
+    }
+  }, [stage])
+
   async function startCamera() {
     setError('')
     try {
@@ -31,11 +39,7 @@ export default function CameraCapture() {
         audio: false,
       })
       streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-      setStage('preview')
+      setStage('preview') // video 요소 렌더 → useEffect에서 스트림 연결
     } catch {
       setError('카메라 접근 권한이 필요합니다.')
     }
