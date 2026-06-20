@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { createAnonClient } from '@/lib/supabase-server'
 import type { Planet } from '@/lib/types'
 
+const SoundToggle = dynamic(() => import('@/components/public/SoundToggle'), { ssr: false })
+
 const SpaceSimulator = dynamic(
   () => import('@/components/public/SpaceSimulator'),
   {
@@ -33,6 +35,11 @@ export default async function HomePage() {
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-[#020208]">
       <SpaceSimulator planets={planets} />
+
+      {/* ── 사운드 토글 ── */}
+      <div className="absolute top-6 right-6 z-20">
+        <SoundToggle />
+      </div>
 
       {/* ── 하단 네비게이션 버튼 ── */}
       <nav className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 flex gap-3">
