@@ -20,22 +20,26 @@ export const revalidate = 60
 
 export default async function CameraPage() {
   const planets = await getPlanets()
+  // 업로드된 우주 이미지(행성 텍스처)들을 결과 이미지 후보로 사용
+  const spaceImages = planets
+    .map(p => p.texture_url)
+    .filter((u): u is string => !!u)
 
   return (
-    <main className="relative w-screen h-screen overflow-hidden">
+    <main className="relative w-screen h-screen overflow-hidden flex items-center justify-center p-4">
       <SpaceBackdrop planets={planets} />
 
-      {/* 글래스 패널 — 홈 위에 떠오르듯 */}
-      <div className="fixed inset-3 md:inset-6 z-10 rounded-3xl overflow-hidden
+      {/* 팝업형 글래스 패널 */}
+      <div className="relative z-10 w-full max-w-2xl max-h-[90vh] rounded-3xl overflow-hidden
         bg-white/[0.06] backdrop-blur-2xl border border-white/15 shadow-2xl">
-        <div className="h-full overflow-y-auto px-6 md:px-12 py-8">
+        <div className="max-h-[90vh] overflow-y-auto px-6 md:px-8 py-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-xs text-white/60 hover:text-space-blue transition-colors mb-8"
+            className="inline-flex items-center gap-2 text-xs text-white/60 hover:text-space-blue transition-colors mb-5"
           >
             ← Archive Index
           </Link>
-          <CameraCapture />
+          <CameraCapture spaceImages={spaceImages} />
         </div>
       </div>
     </main>

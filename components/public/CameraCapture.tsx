@@ -1,12 +1,13 @@
 'use client'
 
 import { useRef, useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { playBeep, playShutter } from '@/lib/sfx'
 
 type Stage = 'idle' | 'preview' | 'countdown' | 'result'
 
 // 방문자 셀카를 찍고 우주 이미지+화살표를 보여주는 컴포넌트
-export default function CameraCapture() {
+export default function CameraCapture({ spaceImages = [] }: { spaceImages?: string[] }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const resultCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -85,20 +86,96 @@ export default function CameraCapture() {
         await fetch('/api/public/selfie', { method: 'POST', body: fd }).catch(() => {})
       }
 
-      // 결과 화면: 우주 이미지 + 화살표 그리기
-      drawSpaceResult()
+      // 결과 화면 먼저 보여주고, 캔버스가 DOM에 그려진 뒤 그리기
       setStage('result')
       setUploading(false)
+      requestAnimationFrame(() => { drawSpaceResult() })
     }, 'image/jpeg', 0.9)
   }
 
-  function drawSpaceResult() {
+  function loadImg(url: string): Promise<HTMLImageElement | null> {
+    return new Promise((resolve) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => resolve(img)
+      img.onerror = () => resolve(null)
+      // CORS 우회 프록시 경유
+      img.src = `/api/texture-proxy?url=${encodeURIComponent(url)}`
+    })
+  }
+
+  // 화살표 + "YOU ARE HERE" 를 캔버스 임의 위치에 그림
+  function drawArrowAndLabel(ctx: CanvasRenderingContext2D, W: number, H: number) {
+    const ax = W * (0.2 + Math.random() * 0.6)
+    const ay = H * (0.2 + Math.random() * 0.6)
+    const arrowLen = 130 + Math.random() * 80
+    const arrowAngle = Math.random() * Math.PI * 2
+    const tx = ax + Math.cos(arrowAngle) * arrowLen
+    const ty = ay + Math.sin(arrowAngle) * arrowLen
+
+    ctx.shadowColor = 'rgba(0,0,0,0.8)'
+    ctx.shadowBlur = 8
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)'
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.moveTo(ax, ay)
+    ctx.lineTo(tx, ty)
+    ctx.stroke()
+
+    const headLen = 20
+    const headAngle = 0.4
+    ctx.beginPath()
+    ctx.moveTo(ax, ay)
+    ctx.lineTo(ax + Math.cos(arrowAngle + headAngle) * headLen, ay + Math.sin(arrowAngle + headAngle) * headLen)
+    ctx.moveTo(ax, ay)
+    ctx.lineTo(ax + Math.cos(arrowAngle - headAngle) * headLen, ay + Math.sin(arrowAngle - headAngle) * headLen)
+    ctx.stroke()
+
+    ctx.font = 'bold 30px Arial, sans-serif'
+    ctx.fillStyle = 'rgba(255,255,255,0.98)'
+    ;(ctx as any).letterSpacing = '4px'
+    const label = 'YOU ARE HERE.'
+    const textW = ctx.measureText(label).width
+    const lx = tx + Math.cos(arrowAngle) * 30
+    const ly = ty + Math.sin(arrowAngle) * 30
+    const finalX = Math.max(textW / 2 + 24, Math.min(W - textW / 2 - 24, lx))
+    const finalY = Math.max(46, Math.min(H - 24, ly))
+    ctx.fillText(label, finalX - textW / 2, finalY)
+    ctx.shadowBlur = 0
+  }
+
+  async function drawSpaceResult() {
     const canvas = resultCanvasRef.current
     if (!canvas) return
     const W = canvas.width = 1600
     const H = canvas.height = 1000
     const ctx = canvas.getContext('2d')!
 
+    // 등록된 우주 이미지가 있으면 랜덤 선택해서 배경으로
+    let img: HTMLImageElement | null = null
+    if (spaceImages.length > 0) {
+      const url = spaceImages[Math.floor(Math.random() * spaceImages.length)]
+      img = await loadImg(url)
+    }
+
+    if (img) {
+      // cover-fit
+      const scale = Math.max(W / img.width, H / img.height)
+      const dw = img.width * scale
+      const dh = img.height * scale
+      ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh)
+      // 가독성 위해 살짝 어둡게
+      ctx.fillStyle = 'rgba(0,0,10,0.25)'
+      ctx.fillRect(0, 0, W, H)
+      drawArrowAndLabel(ctx, W, H)
+      return
+    }
+
+    // 이미지 없으면 생성 우주 배경
+    drawGeneratedSpace(ctx, W, H)
+  }
+
+  function drawGeneratedSpace(ctx: CanvasRenderingContext2D, W: number, H: number) {
     // 배경: 칠흑 우주
     ctx.fillStyle = '#000005'
     ctx.fillRect(0, 0, W, H)
@@ -138,54 +215,7 @@ export default function CameraCapture() {
     ctx.ellipse(cx, cy, 60, 28, Math.PI * 0.3, 0, Math.PI * 2)
     ctx.fill()
 
-    // "You are here" 위치: 은하 외곽 랜덤
-    const angle = Math.random() * Math.PI * 2
-    const dist = 200 + Math.random() * 240
-    const ax = cx + Math.cos(angle) * dist
-    const ay = cy + Math.sin(angle) * dist * 0.5
-
-    // 화살표 그리기
-    const arrowLen = 110 + Math.random() * 60
-    const arrowAngle = angle + Math.PI + (Math.random() - 0.5) * 0.6
-    const tx = ax + Math.cos(arrowAngle) * arrowLen
-    const ty = ay + Math.sin(arrowAngle) * arrowLen
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)'
-    ctx.lineWidth = 3
-    ctx.beginPath()
-    ctx.moveTo(ax, ay)
-    ctx.lineTo(tx, ty)
-    ctx.stroke()
-
-    // 화살촉
-    const headLen = 18
-    const headAngle = 0.4
-    ctx.beginPath()
-    ctx.moveTo(ax, ay)
-    ctx.lineTo(
-      ax + Math.cos(arrowAngle + headAngle) * headLen,
-      ay + Math.sin(arrowAngle + headAngle) * headLen
-    )
-    ctx.moveTo(ax, ay)
-    ctx.lineTo(
-      ax + Math.cos(arrowAngle - headAngle) * headLen,
-      ay + Math.sin(arrowAngle - headAngle) * headLen
-    )
-    ctx.stroke()
-
-    // "YOU ARE HERE" 텍스트
-    ctx.font = 'bold 28px Arial, sans-serif'
-    ctx.fillStyle = 'rgba(255,255,255,0.95)'
-    ;(ctx as any).letterSpacing = '4px'
-    const label = 'YOU ARE HERE.'
-    const textW = ctx.measureText(label).width
-    // 텍스트 위치: 화살표 끝 근처
-    const lx = tx + Math.cos(arrowAngle) * 28
-    const ly = ty + Math.sin(arrowAngle) * 28
-    // 화면 경계 보정
-    const finalX = Math.max(textW / 2 + 20, Math.min(W - textW / 2 - 20, lx))
-    const finalY = Math.max(40, Math.min(H - 20, ly))
-    ctx.fillText(label, finalX - textW / 2, finalY)
+    drawArrowAndLabel(ctx, W, H)
   }
 
   function reset() {
@@ -220,7 +250,7 @@ export default function CameraCapture() {
       {/* camera preview */}
       {(stage === 'preview' || stage === 'countdown') && (
         <div className="flex flex-col items-center gap-5">
-          <div className="relative w-full max-w-4xl aspect-video rounded-2xl overflow-hidden border border-space-border bg-black">
+          <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-space-border bg-black">
             <video
               ref={videoRef}
               autoPlay
@@ -280,18 +310,23 @@ export default function CameraCapture() {
             <p className="text-xs tracking-[0.3em] text-space-blue uppercase mb-2">Transmission Received</p>
             <p className="text-sm text-space-muted">우주에서 당신을 발견했습니다.</p>
           </div>
-          <div className="w-full max-w-4xl rounded-2xl overflow-hidden border border-space-border">
+          <div className="w-full rounded-2xl overflow-hidden border border-space-border">
             <canvas
               ref={resultCanvasRef}
               className="w-full"
             />
           </div>
           <p className="text-xs text-space-muted/60 text-center">
-            실제 촬영된 사진은 방명록(Guestbook)에서 확인하세요
+            실제 촬영된 사진은 게스트 아카이브에서 확인할 수 있어요
           </p>
-          <button onClick={reset} className="btn-ghost text-sm px-6">
-            다시 찍기
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link href="/guestbook" className="btn-primary px-6 py-3">
+              게스트 아카이브로 이동 →
+            </Link>
+            <button onClick={reset} className="btn-ghost text-sm px-6">
+              다시 찍기
+            </button>
+          </div>
         </div>
       )}
     </div>
