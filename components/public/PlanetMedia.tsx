@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { getCtx, createDrone } from '@/lib/sfx'
+import { getSoundOn, setSoundOn } from '@/lib/soundState'
 
 interface Props {
   bgVideoUrl: string | null
@@ -18,10 +19,16 @@ export default function PlanetMedia({ bgVideoUrl, soundUrl, homeSoundUrl }: Prop
   const stopDroneRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
+    // 홈/다른 페이지에서 켜둔 상태면 이어서 재생
+    if (getSoundOn()) {
+      // 배경영상 unmute는 video 요소가 마운트된 뒤여야 하므로 다음 프레임에
+      requestAnimationFrame(() => { startAudio(); setOn(true) })
+    }
     return () => {
       stopDroneRef.current?.()
       audioRef.current?.pause()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function stopAll() {
@@ -50,8 +57,8 @@ export default function PlanetMedia({ bgVideoUrl, soundUrl, homeSoundUrl }: Prop
   }
 
   function toggle() {
-    if (on) { stopAll(); setOn(false) }
-    else { startAudio(); setOn(true) }
+    if (on) { stopAll(); setOn(false); setSoundOn(false) }
+    else { startAudio(); setOn(true); setSoundOn(true) }
   }
 
   return (

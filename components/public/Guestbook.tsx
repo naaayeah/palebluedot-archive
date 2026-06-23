@@ -18,6 +18,7 @@ export default function Guestbook() {
   const [selfies, setSelfies] = useState<VisitorSelfie[]>([])
   const [tab, setTab] = useState<'messages' | 'selfies'>('messages')
   const [loading, setLoading] = useState(true)
+  const [lightbox, setLightbox] = useState<number | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -28,6 +29,21 @@ export default function Guestbook() {
       setSelfies(s.selfies ?? [])
     }).finally(() => setLoading(false))
   }, [])
+
+  const showPrev = () => setLightbox(i => (i === null ? i : (i - 1 + selfies.length) % selfies.length))
+  const showNext = () => setLightbox(i => (i === null ? i : (i + 1) % selfies.length))
+
+  useEffect(() => {
+    if (lightbox === null) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightbox(null)
+      else if (e.key === 'ArrowLeft') showPrev()
+      else if (e.key === 'ArrowRight') showNext()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lightbox, selfies.length])
 
   return (
     <div className="w-full">
@@ -91,20 +107,84 @@ export default function Guestbook() {
         selfies.length === 0 ? (
           <p className="text-center text-space-muted text-sm py-12">아직 촬영된 사진이 없어요.</p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-w-3xl mx-auto">
-            {selfies.map(s => (
-              <div key={s.id} className="aspect-square rounded-xl overflow-hidden border border-space-border bg-space-surface">
+          <div className="columns-2 sm:columns-3 md:columns-4 gap-3 max-w-4xl mx-auto [column-fill:_balance]">
+            {selfies.map((s, idx) => (
+              <button
+                key={s.id}
+                onClick={() => setLightbox(idx)}
+                className="mb-3 w-full block rounded-xl overflow-hidden border border-space-border bg-space-surface
+                  hover:border-space-blue/50 transition-colors break-inside-avoid"
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={s.image_url}
                   alt="visitor"
-                  className="w-full h-full object-cover"
+                  className="w-full h-auto block"
                   loading="lazy"
                 />
-              </div>
+              </button>
             ))}
           </div>
         )
+      )}
+
+      {/* 라이트박스 */}
+      {lightbox !== null && selfies[lightbox] && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm"
+          onClick={() => setLightbox(null)}
+        >
+          {/* 닫기 */}
+          <button
+            onClick={(e) => { e.stopPropagation(); setLightbox(null) }}
+            aria-label="닫기"
+            className="absolute top-5 right-5 w-11 h-11 rounded-full flex items-center justify-center
+              bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+
+          {/* 이전 */}
+          {selfies.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); showPrev() }}
+              aria-label="이전"
+              className="absolute left-3 md:left-6 w-12 h-12 rounded-full flex items-center justify-center
+                bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+          )}
+
+          {/* 이미지 */}
+          <div className="max-w-[90vw] max-h-[85vh] flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={selfies[lightbox].image_url}
+              alt="visitor"
+              className="max-w-[90vw] max-h-[80vh] object-contain rounded-xl"
+            />
+            <p className="text-xs text-white/50">{lightbox + 1} / {selfies.length} · {timeAgo(selfies[lightbox].created_at)}</p>
+          </div>
+
+          {/* 다음 */}
+          {selfies.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); showNext() }}
+              aria-label="다음"
+              className="absolute right-3 md:right-6 w-12 h-12 rounded-full flex items-center justify-center
+                bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          )}
+        </div>
       )}
     </div>
   )

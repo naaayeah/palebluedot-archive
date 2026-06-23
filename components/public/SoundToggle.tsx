@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { getCtx, createDrone } from '@/lib/sfx'
+import { getSoundOn, setSoundOn } from '@/lib/soundState'
 
 // 홈 배경 사운드 토글. 어드민에서 업로드한 파일이 있으면 그 파일을, 없으면 생성 드론을 재생
 export default function SoundToggle() {
@@ -10,26 +11,7 @@ export default function SoundToggle() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const stopDroneRef = useRef<(() => void) | null>(null)
 
-  useEffect(() => {
-    fetch('/api/public/settings')
-      .then(r => r.json())
-      .then(d => { soundUrlRef.current = d.home_sound_url ?? null })
-      .catch(() => {})
-    return () => {
-      stopDroneRef.current?.()
-      audioRef.current?.pause()
-    }
-  }, [])
-
-  async function toggle() {
-    if (on) {
-      stopDroneRef.current?.()
-      stopDroneRef.current = null
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
-      setOn(false)
-      return
-    }
-
+  function start() {
     if (soundUrlRef.current) {
       const audio = new Audio(soundUrlRef.current)
       audio.loop = true
@@ -40,7 +22,37 @@ export default function SoundToggle() {
       const ctx = getCtx()
       if (ctx) stopDroneRef.current = createDrone(ctx)
     }
-    setOn(true)
+  }
+
+  function stop() {
+    stopDroneRef.current?.()
+    stopDroneRef.current = null
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
+  }
+
+  useEffect(() => {
+    fetch('/api/public/settings')
+      .then(r => r.json())
+      .then(d => {
+        soundUrlRef.current = d.home_sound_url ?? null
+        // 이전 페이지에서 켜둔 상태면 이어서 재생
+        if (getSoundOn()) { start(); setOn(true) }
+      })
+      .catch(() => {})
+    return () => stop()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function toggle() {
+    if (on) {
+      stop()
+      setOn(false)
+      setSoundOn(false)
+    } else {
+      start()
+      setOn(true)
+      setSoundOn(true)
+    }
   }
 
   return (
