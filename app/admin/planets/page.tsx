@@ -19,6 +19,11 @@ export default function PlanetsPage() {
   const [loading, setLoading] = useState(true)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
+  // 인라인 이름 수정
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [savingName, setSavingName] = useState(false)
+
   // 새 행성 추가 상태
   const [showAdd, setShowAdd] = useState(false)
   const [newName, setNewName] = useState('')
@@ -66,6 +71,26 @@ export default function PlanetsPage() {
       setAddError(error || '생성 실패')
       setAdding(false)
     }
+  }
+
+  function startRename(planet: Planet) {
+    setEditingId(planet.id)
+    setEditName(planet.name)
+  }
+
+  async function saveName(id: string) {
+    if (!editName.trim()) return
+    setSavingName(true)
+    const res = await fetch(`/api/admin/planets/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: editName.trim() }),
+    })
+    if (res.ok) {
+      setPlanets(prev => prev.map(p => p.id === id ? { ...p, name: editName.trim() } : p))
+      setEditingId(null)
+    }
+    setSavingName(false)
   }
 
   async function toggleVisibility(id: string, current: boolean) {
@@ -179,8 +204,44 @@ export default function PlanetsPage() {
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="text-space-text font-semibold">{planet.name}</p>
-                <p className="text-space-muted text-xs mt-0.5">{planet.subtitle || <span className="italic opacity-50">부제 없음</span>}</p>
+                {editingId === planet.id ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') saveName(planet.id)
+                        else if (e.key === 'Escape') setEditingId(null)
+                      }}
+                      autoFocus
+                      className="input-field py-1.5 text-sm max-w-xs"
+                    />
+                    <button onClick={() => saveName(planet.id)} disabled={savingName || !editName.trim()}
+                      className="btn-primary text-xs py-1.5 px-3 shrink-0">
+                      {savingName ? '...' : '저장'}
+                    </button>
+                    <button onClick={() => setEditingId(null)} className="btn-ghost text-xs py-1.5 px-2 shrink-0">
+                      취소
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <p className="text-space-text font-semibold truncate">{planet.name}</p>
+                      <button
+                        onClick={() => startRename(planet)}
+                        className="text-space-muted/60 hover:text-space-blue transition-colors shrink-0"
+                        aria-label="이름 수정"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                        </svg>
+                      </button>
+                    </div>
+                    <p className="text-space-muted text-xs mt-0.5">{planet.subtitle || <span className="italic opacity-50">부제 없음</span>}</p>
+                  </>
+                )}
               </div>
 
               <span className="font-mono text-xs text-space-muted hidden sm:block">{planet.id}</span>
