@@ -9,6 +9,8 @@ export interface Planet {
   texture_url: string | null
   bg_video_url: string | null
   sound_url: string | null
+  size: number | null        // null = 자동(시드 기반)
+  has_ring: boolean | null    // null = 자동, true/false = 강제
   is_visible: boolean
   created_at: string
 }

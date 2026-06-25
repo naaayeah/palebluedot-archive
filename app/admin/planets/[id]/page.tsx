@@ -364,6 +364,53 @@ export default function PlanetEditPage() {
             </div>
           ))}
 
+          {/* 행성 크기 */}
+          <div className="pt-2 border-t border-space-border">
+            <div className="flex items-center justify-between mb-2">
+              <label className="label mb-0">행성 크기 (3D)</label>
+              <label className="flex items-center gap-2 text-xs text-space-muted cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.size == null}
+                  onChange={e => setForm(f => ({ ...f, size: e.target.checked ? null : 9 }))}
+                  className="accent-space-blue"
+                />
+                자동
+              </label>
+            </div>
+            {form.size != null && (
+              <div className="flex items-center gap-3">
+                <input
+                  type="range" min={3} max={18} step={0.5}
+                  value={form.size}
+                  onChange={e => setForm(f => ({ ...f, size: parseFloat(e.target.value) }))}
+                  className="flex-1 accent-space-blue"
+                />
+                <span className="font-mono text-xs text-space-blue w-10 text-right">{form.size}</span>
+              </div>
+            )}
+          </div>
+
+          {/* 고리 여부 */}
+          <div className="flex items-center justify-between pt-2 border-t border-space-border">
+            <div>
+              <label className="label mb-0">고리(Ring)</label>
+              <p className="text-xs text-space-muted mt-0.5">자동: 행성마다 랜덤 결정</p>
+            </div>
+            <select
+              value={form.has_ring == null ? 'auto' : form.has_ring ? 'yes' : 'no'}
+              onChange={e => {
+                const v = e.target.value
+                setForm(f => ({ ...f, has_ring: v === 'auto' ? null : v === 'yes' }))
+              }}
+              className="input-field w-28"
+            >
+              <option value="auto">자동</option>
+              <option value="yes">있음</option>
+              <option value="no">없음</option>
+            </select>
+          </div>
+
           <div className="flex items-center justify-between pt-2 border-t border-space-border">
             <div>
               <label className="label mb-0">공개 여부</label>

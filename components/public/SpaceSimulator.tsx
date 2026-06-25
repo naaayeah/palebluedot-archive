@@ -156,7 +156,8 @@ export default function SpaceSimulator({ planets, showOverlay = true }: Props) {
         const s3 = seededRng(planet.id, 3)
         const s4 = seededRng(planet.id, 4)
 
-        const size = 5 + s0 * 8
+        // 크기: 어드민 지정값 우선, 없으면 시드 기반
+        const size = (planet.size != null && planet.size > 0) ? planet.size : 5 + s0 * 8
         const basePos = fibPos(i, planets.length, 42 + s1 * 30)
         const pos = {
           x: basePos.x + (s2 - 0.5) * 14,
@@ -194,9 +195,10 @@ export default function SpaceSimulator({ planets, showOverlay = true }: Props) {
           })
         ))
 
-        // ── 링: scene 직속으로 추가, 행성 회전과 완전 독립 ──
+        // ── 링: 어드민 지정값 우선(has_ring), 없으면 시드 기반 ──
+        const showRing = planet.has_ring != null ? planet.has_ring : s4 > 0.55
         const planetRings: THREE_TYPES.Mesh[] = []
-        if (s4 > 0.55) {
+        if (showRing) {
           // RingGeometry = 납작한 띠 (토러스 아님)
           const inner = size * (1.6 + s0 * 0.4)
           const outer = inner * (1.3 + s1 * 0.35)
