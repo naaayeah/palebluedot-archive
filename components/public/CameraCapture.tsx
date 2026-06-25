@@ -237,7 +237,7 @@ export default function CameraCapture({ spaceImages = [] }: { spaceImages?: stri
               You Are Here
             </h2>
             <p className="text-sm text-space-muted max-w-sm mx-auto leading-relaxed">
-              광활한 우주 어딘가에서 당신을 찾아 카메라를 겨눕니다.
+              우주에서 당신을 찾아 사진을 찍어드립니다
             </p>
           </div>
           {error && <p className="text-space-danger text-xs">{error}</p>}

@@ -28,10 +28,10 @@ export default function Guestbook() {
       fetch('/api/public/selfie').then(r => r.json()),
     ]).then(([g, s]) => {
       setMessages(g.messages ?? [])
-      // 시간순(오래된→최신) 정렬 — 가로로 왼→오 시간 흐름
+      // 최신순 정렬 (최근이 먼저)
       const sorted = (s.selfies ?? []).slice().sort(
         (a: VisitorSelfie, b: VisitorSelfie) =>
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
       setSelfies(sorted)
     }).finally(() => setLoading(false))
@@ -103,17 +103,16 @@ export default function Guestbook() {
             {selfies.length === 0 ? (
               <p className="text-center text-space-muted text-sm py-8">아직 촬영된 사진이 없어요.</p>
             ) : (
-              <div className="flex gap-3 overflow-x-auto pb-3 max-w-5xl mx-auto
-                snap-x [scrollbar-width:thin]">
+              <div className="grid grid-cols-3 gap-3 max-w-4xl mx-auto">
                 {selfies.map((s, idx) => (
                   <button
                     key={s.id}
                     onClick={() => setLightbox(idx)}
-                    className="shrink-0 h-48 snap-start rounded-xl overflow-hidden border border-space-border bg-space-surface
+                    className="aspect-[4/3] rounded-xl overflow-hidden border border-space-border bg-space-surface
                       hover:border-space-blue/50 transition-colors"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={s.image_url} alt="visitor" className="h-full w-auto block" loading="lazy" />
+                    <img src={s.image_url} alt="visitor" className="w-full h-full object-cover" loading="lazy" />
                   </button>
                 ))}
               </div>

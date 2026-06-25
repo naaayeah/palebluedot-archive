@@ -323,7 +323,7 @@ export default function SpaceSimulator({ planets, showOverlay = true }: Props) {
       {showOverlay && (
         <>
           <div className="absolute top-8 left-1/2 -translate-x-1/2 text-center pointer-events-none z-10 select-none">
-            <p className="text-xs tracking-[0.45em] text-space-blue/50 uppercase mb-3">Planetary Archive</p>
+            <p className="text-xs tracking-[0.35em] text-space-blue/60 mb-3">영상 속 주인공이 다녀간 우주를 경험해보세요</p>
             <h1
               className="text-5xl md:text-7xl text-white leading-tight drop-shadow-lg"
               style={{ fontFamily: '"Times New Roman", Georgia, Times, serif', fontStyle: 'italic', fontWeight: 'bold' }}
