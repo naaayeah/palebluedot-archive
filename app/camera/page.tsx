@@ -28,9 +28,9 @@ export default async function CameraPage() {
       <SpaceBackdrop planets={planets} />
 
       {/* 팝업형 글래스 패널 */}
-      <div className="relative z-10 w-full max-w-2xl max-h-[90vh] rounded-3xl overflow-hidden
+      <div className="relative z-10 w-full max-w-5xl max-h-[94vh] rounded-3xl overflow-hidden
         bg-white/[0.06] backdrop-blur-2xl border border-white/15 shadow-2xl">
-        <div className="max-h-[90vh] overflow-y-auto px-6 md:px-8 py-6">
+        <div className="max-h-[94vh] overflow-y-auto px-6 md:px-10 py-8">
           <Link
             href="/"
             className="inline-flex items-center gap-2 text-xs text-white/60 hover:text-space-blue transition-colors mb-5"
