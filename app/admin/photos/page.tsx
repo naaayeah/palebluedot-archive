@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
-import type { PlanetPhoto } from '@/lib/types'
+import type { PlanetPhoto, VisitorSelfie } from '@/lib/types'
 
 const PLANETS = [
   { id: 'all', name: 'All Planets' },
@@ -18,10 +18,13 @@ const PLANETS = [
 
 export default function PhotosPage() {
   const [photos, setPhotos] = useState<PlanetPhoto[]>([])
+  const [selfies, setSelfies] = useState<VisitorSelfie[]>([])
   const [loading, setLoading] = useState(true)
   const [planet, setPlanet] = useState('all')
   const [preview, setPreview] = useState<PlanetPhoto | null>(null)
+  const [selfiePreview, setSelfiePreview] = useState<VisitorSelfie | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [selfieDeleteId, setSelfieDeleteId] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const fetchPhotos = useCallback(async () => {
@@ -33,9 +36,27 @@ export default function PhotosPage() {
     setLoading(false)
   }, [planet])
 
+  const fetchSelfies = useCallback(async () => {
+    const res = await fetch('/api/admin/selfies')
+    const data = await res.json()
+    setSelfies(data.selfies ?? [])
+  }, [])
+
   useEffect(() => {
     fetchPhotos()
   }, [fetchPhotos])
+
+  useEffect(() => {
+    fetchSelfies()
+  }, [fetchSelfies])
+
+  async function confirmDeleteSelfie(id: string) {
+    setActionLoading(id)
+    const res = await fetch(`/api/admin/selfies/${id}`, { method: 'DELETE' })
+    if (res.ok) setSelfies(prev => prev.filter(s => s.id !== id))
+    setSelfieDeleteId(null)
+    setActionLoading(null)
+  }
 
   async function toggleHide(id: string, currentlyHidden: boolean) {
     setActionLoading(id)
@@ -68,7 +89,35 @@ export default function PhotosPage() {
       <div className="mb-8">
         <p className="font-mono text-xs tracking-[0.3em] text-space-blue uppercase mb-2">Content Management</p>
         <h1 className="text-3xl font-display font-light text-space-text">Photographs</h1>
-        <p className="mt-1 text-sm text-space-muted font-mono">{photos.length} images</p>
+        <p className="mt-1 text-sm text-space-muted font-mono">{photos.length + selfies.length} images</p>
+      </div>
+
+      {/* ── 우주 카메라 촬영 사진 ── */}
+      <div className="mb-10">
+        <h2 className="font-mono text-xs tracking-[0.2em] text-space-blue uppercase mb-4">
+          Space Camera Captures ({selfies.length})
+        </h2>
+        {selfies.length === 0 ? (
+          <p className="text-space-muted/60 font-mono text-sm">No captures yet.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {selfies.map((s) => (
+              <div key={s.id} className="glass-panel overflow-hidden group relative">
+                <button onClick={() => setSelfiePreview(s)} className="relative aspect-square w-full block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={s.image_url} alt="capture" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <span className="text-white text-xs font-mono">Preview</span>
+                  </div>
+                </button>
+                <div className="p-3 flex items-center justify-between">
+                  <p className="font-mono text-xs text-space-muted">{new Date(s.created_at).toLocaleDateString()}</p>
+                  <button onClick={() => setSelfieDeleteId(s.id)} className="btn-danger text-xs py-1 px-2">✕</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Filter */}
@@ -194,6 +243,45 @@ export default function PhotosPage() {
               <button onClick={() => setDeleteId(null)} className="btn-ghost text-sm">Cancel</button>
               <button
                 onClick={() => confirmDelete(deleteId)}
+                disabled={!!actionLoading}
+                className="btn-danger text-sm"
+              >
+                {actionLoading ? 'Deleting...' : 'Permanently Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Selfie preview */}
+      {selfiePreview && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setSelfiePreview(null)}
+        >
+          <div className="relative max-w-3xl w-full" onClick={(e) => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={selfiePreview.image_url} alt="capture" className="w-full max-h-[80vh] object-contain rounded-xl" />
+            <div className="flex items-center justify-between mt-3">
+              <p className="font-mono text-xs text-space-muted">{new Date(selfiePreview.created_at).toLocaleString()}</p>
+              <button onClick={() => setSelfiePreview(null)} className="btn-ghost text-sm">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Selfie delete confirmation */}
+      {selfieDeleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="glass-panel p-8 max-w-md w-full glow-blue">
+            <h2 className="text-xl font-display text-space-text mb-2">Confirm Deletion</h2>
+            <p className="text-space-muted text-sm font-mono mb-6">
+              This will permanently delete the captured photo from storage.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setSelfieDeleteId(null)} className="btn-ghost text-sm">Cancel</button>
+              <button
+                onClick={() => confirmDeleteSelfie(selfieDeleteId)}
                 disabled={!!actionLoading}
                 className="btn-danger text-sm"
               >
