@@ -1,56 +1,33 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase-server'
 
+// 브라우저가 Supabase에 직접 업로드 후, 결과 URL만 저장 (JSON { url, path })
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const formData = await request.formData()
-  const file = formData.get('file') as File | null
-
-  if (!file) return NextResponse.json({ error: 'No file' }, { status: 400 })
-  if (file.size > 10 * 1024 * 1024) return NextResponse.json({ error: 'Max 10MB' }, { status: 400 })
-
-  const allowed = ['image/jpeg', 'image/png', 'image/webp']
-  if (!allowed.includes(file.type)) return NextResponse.json({ error: 'JPEG/PNG/WEBP only' }, { status: 400 })
+  const { url, path } = await request.json()
+  if (!url) return NextResponse.json({ error: 'No url' }, { status: 400 })
 
   const supabase = createServiceClient()
-  const ext = file.type.split('/')[1] === 'jpeg' ? 'jpg' : file.type.split('/')[1]
-  // 타임스탬프로 파일명 고유화 → CDN/브라우저 캐시 무효화
-  const ts = Date.now()
-  const storagePath = `${params.id}/texture_${ts}.${ext}`
 
-  // 기존 텍스처 파일 삭제 (용량 절약)
-  await supabase.storage.from('planet-textures').remove([
-    `${params.id}/texture.jpg`,
-    `${params.id}/texture.jpeg`,
-    `${params.id}/texture.png`,
-    `${params.id}/texture.webp`,
-    ...(await supabase.storage.from('planet-textures').list(params.id))
-      .data?.map(f => `${params.id}/${f.name}`) ?? [],
-  ])
-
-  const { error: uploadErr } = await supabase.storage
-    .from('planet-textures')
-    .upload(storagePath, file, { contentType: file.type, upsert: false })
-
-  if (uploadErr) return NextResponse.json({ error: uploadErr.message }, { status: 500 })
-
-  const { data: { publicUrl } } = supabase.storage
-    .from('planet-textures')
-    .getPublicUrl(storagePath)
-
-  // 캐시 버스팅 쿼리 파라미터 추가
-  const urlWithCacheBust = `${publicUrl}?v=${ts}`
+  // 새 파일 외 기존 텍스처 정리
+  const { data: files } = await supabase.storage.from('planet-textures').list(params.id)
+  if (files && files.length) {
+    const toRemove = files
+      .filter(f => `${params.id}/${f.name}` !== path)
+      .map(f => `${params.id}/${f.name}`)
+    if (toRemove.length) await supabase.storage.from('planet-textures').remove(toRemove)
+  }
 
   const { error: dbErr } = await supabase
     .from('planets')
-    .update({ texture_url: urlWithCacheBust })
+    .update({ texture_url: url })
     .eq('id', params.id)
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 })
 
-  return NextResponse.json({ texture_url: urlWithCacheBust })
+  return NextResponse.json({ texture_url: url })
 }
 
 export async function DELETE(

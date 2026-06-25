@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { uploadViaSignedUrl } from '@/lib/upload'
 
 interface Background {
   id: string
@@ -28,9 +29,14 @@ export default function CameraBackgrounds() {
     setLoading(true); setMsg('')
     try {
       for (const file of files) {
-        const fd = new FormData()
-        fd.append('file', file)
-        const res = await fetch('/api/admin/camera-backgrounds', { method: 'POST', body: fd })
+        if (file.size > 15 * 1024 * 1024) throw new Error('최대 15MB')
+        const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+        const path = `bg_${Date.now()}_${Math.floor(Math.random() * 1e6)}.${ext}`
+        const publicUrl = await uploadViaSignedUrl('camera-backgrounds', path, file)
+        const res = await fetch('/api/admin/camera-backgrounds', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: publicUrl, path }),
+        })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error)
       }

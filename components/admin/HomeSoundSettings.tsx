@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { uploadViaSignedUrl } from '@/lib/upload'
 
 export default function HomeSoundSettings() {
   const [currentUrl, setCurrentUrl] = useState<string | null>(null)
@@ -26,11 +27,20 @@ export default function HomeSoundSettings() {
 
   async function handleUpload() {
     if (!file) return
+    if (file.size > 50 * 1024 * 1024) { setMsg('오류: 최대 50MB'); return }
     setLoading(true); setMsg('')
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch('/api/admin/settings/sound', { method: 'POST', body: fd })
+      const ext = file.name.split('.').pop() || 'mp3'
+      const path = `home_${Date.now()}.${ext}`
+      // 브라우저 → Supabase 직접 업로드 (서버 본문 제한 우회)
+      const publicUrl = await uploadViaSignedUrl('site-audio', path, file)
+      const url = `${publicUrl}?v=${Date.now()}`
+      // URL만 서버에 저장
+      const res = await fetch('/api/admin/settings/sound', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, path }),
+      })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setCurrentUrl(data.home_sound_url)

@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import type { Planet } from '@/lib/types'
+import { uploadViaSignedUrl } from '@/lib/upload'
 
 const TEXT_FIELDS: { key: keyof Planet; label: string; type: 'text' | 'textarea' | 'url' }[] = [
   { key: 'name',            label: 'Planet Name',         type: 'text' },
@@ -180,10 +181,18 @@ export default function PlanetEditPage() {
       .finally(() => setLoading(false))
   }, [id])
 
+  function extOf(file: File, fallback: string) {
+    return (file.name.split('.').pop() || fallback).toLowerCase()
+  }
+
   async function uploadTexture(file: File) {
-    const fd = new FormData()
-    fd.append('file', file)
-    const res = await fetch(`/api/admin/planets/${id}/texture`, { method: 'POST', body: fd })
+    const path = `${id}/texture_${Date.now()}.${extOf(file, 'jpg')}`
+    const publicUrl = await uploadViaSignedUrl('planet-textures', path, file)
+    const url = `${publicUrl}?v=${Date.now()}`
+    const res = await fetch(`/api/admin/planets/${id}/texture`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, path }),
+    })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error)
     setPlanet(p => p ? { ...p, texture_url: data.texture_url } : p)
@@ -195,9 +204,12 @@ export default function PlanetEditPage() {
   }
 
   async function uploadVideo(file: File) {
-    const fd = new FormData()
-    fd.append('file', file)
-    const res = await fetch(`/api/admin/planets/${id}/video`, { method: 'POST', body: fd })
+    const path = `${id}/bg_${Date.now()}.${extOf(file, 'mp4')}`
+    const publicUrl = await uploadViaSignedUrl('planet-videos', path, file)
+    const res = await fetch(`/api/admin/planets/${id}/video`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: publicUrl, path }),
+    })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error)
     setPlanet(p => p ? { ...p, bg_video_url: data.bg_video_url } : p)
@@ -209,9 +221,13 @@ export default function PlanetEditPage() {
   }
 
   async function uploadSound(file: File) {
-    const fd = new FormData()
-    fd.append('file', file)
-    const res = await fetch(`/api/admin/planets/${id}/sound`, { method: 'POST', body: fd })
+    const path = `${id}/sound_${Date.now()}.${extOf(file, 'mp3')}`
+    const publicUrl = await uploadViaSignedUrl('planet-sounds', path, file)
+    const url = `${publicUrl}?v=${Date.now()}`
+    const res = await fetch(`/api/admin/planets/${id}/sound`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, path }),
+    })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error)
     setPlanet(p => p ? { ...p, sound_url: data.sound_url } : p)

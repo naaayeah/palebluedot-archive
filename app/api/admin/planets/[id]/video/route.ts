@@ -1,45 +1,33 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase-server'
 
+// 브라우저가 Supabase에 직접 업로드 후, 결과 URL만 저장 (JSON { url, path })
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const formData = await request.formData()
-  const file = formData.get('file') as File | null
-
-  if (!file) return NextResponse.json({ error: 'No file' }, { status: 400 })
-  if (file.size > 200 * 1024 * 1024) {
-    return NextResponse.json({ error: '최대 200MB까지 업로드 가능합니다' }, { status: 400 })
-  }
-
-  const allowed = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo']
-  if (!allowed.includes(file.type)) {
-    return NextResponse.json({ error: 'MP4/WebM/MOV/AVI만 지원합니다' }, { status: 400 })
-  }
+  const { url, path } = await request.json()
+  if (!url) return NextResponse.json({ error: 'No url' }, { status: 400 })
 
   const supabase = createServiceClient()
-  const ext = file.name.split('.').pop() || 'mp4'
-  const storagePath = `${params.id}/bg.${ext}`
 
-  const { error: uploadErr } = await supabase.storage
-    .from('planet-videos')
-    .upload(storagePath, file, { contentType: file.type, upsert: true })
-
-  if (uploadErr) return NextResponse.json({ error: uploadErr.message }, { status: 500 })
-
-  const { data: { publicUrl } } = supabase.storage
-    .from('planet-videos')
-    .getPublicUrl(storagePath)
+  // 새 파일 외 기존 영상 정리
+  const { data: files } = await supabase.storage.from('planet-videos').list(params.id)
+  if (files && files.length) {
+    const toRemove = files
+      .filter(f => `${params.id}/${f.name}` !== path)
+      .map(f => `${params.id}/${f.name}`)
+    if (toRemove.length) await supabase.storage.from('planet-videos').remove(toRemove)
+  }
 
   const { error: dbErr } = await supabase
     .from('planets')
-    .update({ bg_video_url: publicUrl })
+    .update({ bg_video_url: url })
     .eq('id', params.id)
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 })
 
-  return NextResponse.json({ bg_video_url: publicUrl })
+  return NextResponse.json({ bg_video_url: url })
 }
 
 export async function DELETE(
