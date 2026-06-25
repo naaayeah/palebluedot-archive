@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   if (!ALLOWED_BUCKETS.includes(bucket)) {
     return NextResponse.json({ error: 'Invalid bucket' }, { status: 403 })
   }
-  if (typeof path !== 'string' || path.includes('..') || !/^[\w./-]+$/.test(path)) {
+  if (typeof path !== 'string' || path.includes('..') || !/^[\p{L}\p{N}._/-]+$/u.test(path)) {
     return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
   }
 
