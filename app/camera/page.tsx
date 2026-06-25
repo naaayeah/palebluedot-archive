@@ -6,24 +6,22 @@ import type { Planet } from '@/lib/types'
 
 const CameraCapture = dynamic(() => import('@/components/public/CameraCapture'), { ssr: false })
 
-async function getPlanets(): Promise<Planet[]> {
+async function getData() {
   const supabase = createAnonClient()
-  const { data } = await supabase
-    .from('planets')
-    .select('*')
-    .eq('is_visible', true)
-    .order('created_at', { ascending: true })
-  return (data as Planet[]) ?? []
+  const [{ data: planets }, { data: backgrounds }] = await Promise.all([
+    supabase.from('planets').select('*').eq('is_visible', true).order('created_at', { ascending: true }),
+    supabase.from('camera_backgrounds').select('image_url').order('created_at', { ascending: false }),
+  ])
+  return {
+    planets: (planets as Planet[]) ?? [],
+    spaceImages: (backgrounds ?? []).map((b: { image_url: string }) => b.image_url),
+  }
 }
 
 export const revalidate = 60
 
 export default async function CameraPage() {
-  const planets = await getPlanets()
-  // 업로드된 우주 이미지(행성 텍스처)들을 결과 이미지 후보로 사용
-  const spaceImages = planets
-    .map(p => p.texture_url)
-    .filter((u): u is string => !!u)
+  const { planets, spaceImages } = await getData()
 
   return (
     <main className="relative w-screen h-screen overflow-hidden flex items-center justify-center p-4">

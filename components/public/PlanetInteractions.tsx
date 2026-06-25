@@ -13,12 +13,10 @@ interface Props {
 
 export default function PlanetInteractions({ planetId, questionPrompt, initialMessages, initialPhotos }: Props) {
   const [messages, setMessages] = useState<PlanetMessage[]>(initialMessages)
-  const [photos, setPhotos] = useState<PlanetPhoto[]>(initialPhotos)
+  const [photos] = useState<PlanetPhoto[]>(initialPhotos)
   const [msgText, setMsgText] = useState('')
   const [msgLoading, setMsgLoading] = useState(false)
   const [msgSuccess, setMsgSuccess] = useState(false)
-  const [photoLoading, setPhotoLoading] = useState(false)
-  const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [lightbox, setLightbox] = useState<string | null>(null)
 
   useEffect(() => {
@@ -48,27 +46,6 @@ export default function PlanetInteractions({ planetId, questionPrompt, initialMe
       }
     } finally {
       setMsgLoading(false)
-    }
-  }
-
-  async function uploadPhoto(e: React.FormEvent) {
-    e.preventDefault()
-    if (!photoFile) return
-    setPhotoLoading(true)
-    try {
-      const fd = new FormData()
-      fd.append('file', photoFile)
-      fd.append('planet_id', planetId)
-      const res = await fetch('/api/public/photos', { method: 'POST', body: fd })
-      if (res.ok) {
-        const { photo } = await res.json()
-        setPhotos((prev) => [photo, ...prev])
-        setPhotoFile(null)
-        const input = document.getElementById('photo-input') as HTMLInputElement
-        if (input) input.value = ''
-      }
-    } finally {
-      setPhotoLoading(false)
     }
   }
 
@@ -131,22 +108,6 @@ export default function PlanetInteractions({ planetId, questionPrompt, initialMe
         <h2 className="font-mono text-xs tracking-[0.3em] text-space-blue uppercase mb-6">
           Photographs
         </h2>
-
-        <form onSubmit={uploadPhoto} className="glass-panel p-6 mb-8 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <input
-            id="photo-input"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
-            className="text-sm font-mono text-space-muted file:mr-4 file:py-2 file:px-4
-                       file:rounded-lg file:border file:border-space-border file:bg-transparent
-                       file:text-space-text file:font-mono file:text-xs file:cursor-pointer
-                       hover:file:border-space-blue/40"
-          />
-          <button type="submit" disabled={photoLoading || !photoFile} className="btn-primary shrink-0">
-            {photoLoading ? 'Uploading...' : 'Upload'}
-          </button>
-        </form>
 
         {photos.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
