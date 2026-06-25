@@ -16,9 +16,11 @@ function timeAgo(dateStr: string) {
 export default function Guestbook() {
   const [messages, setMessages] = useState<PlanetMessage[]>([])
   const [selfies, setSelfies] = useState<VisitorSelfie[]>([])
-  const [tab, setTab] = useState<'messages' | 'selfies'>('messages')
   const [loading, setLoading] = useState(true)
   const [lightbox, setLightbox] = useState<number | null>(null)
+
+  const [msgText, setMsgText] = useState('')
+  const [posting, setPosting] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -29,6 +31,26 @@ export default function Guestbook() {
       setSelfies(s.selfies ?? [])
     }).finally(() => setLoading(false))
   }, [])
+
+  async function submitMessage(e: React.FormEvent) {
+    e.preventDefault()
+    if (!msgText.trim()) return
+    setPosting(true)
+    try {
+      const res = await fetch('/api/public/guestbook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: msgText.trim() }),
+      })
+      if (res.ok) {
+        const { message } = await res.json()
+        setMessages(prev => [message, ...prev])
+        setMsgText('')
+      }
+    } finally {
+      setPosting(false)
+    }
+  }
 
   const showPrev = () => setLightbox(i => (i === null ? i : (i - 1 + selfies.length) % selfies.length))
   const showNext = () => setLightbox(i => (i === null ? i : (i + 1) % selfies.length))
@@ -47,7 +69,7 @@ export default function Guestbook() {
 
   return (
     <div className="w-full">
-      <div className="text-center mb-8">
+      <div className="text-center mb-10">
         <p className="text-xs tracking-[0.3em] text-space-blue uppercase mb-3">Archive Records</p>
         <h2
           className="text-5xl text-space-text"
@@ -58,23 +80,6 @@ export default function Guestbook() {
         <p className="text-sm text-space-muted mt-3">우주를 다녀간 이들의 흔적</p>
       </div>
 
-      {/* 탭 */}
-      <div className="flex justify-center gap-1 mb-8">
-        {(['messages', 'selfies'] as const).map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-5 py-2 text-xs tracking-widest uppercase rounded-full transition-colors ${
-              tab === t
-                ? 'bg-space-blue/20 text-space-blue border border-space-blue/40'
-                : 'text-space-muted hover:text-space-text border border-transparent'
-            }`}
-          >
-            {t === 'messages' ? `메시지 (${messages.length})` : `우주 사진 (${selfies.length})`}
-          </button>
-        ))}
-      </div>
-
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="flex gap-1.5">
@@ -83,49 +88,77 @@ export default function Guestbook() {
             ))}
           </div>
         </div>
-      ) : tab === 'messages' ? (
-        messages.length === 0 ? (
-          <p className="text-center text-space-muted text-sm py-12">아직 메시지가 없어요.</p>
-        ) : (
-          <div className="grid gap-3 max-w-2xl mx-auto">
-            {messages.map(msg => (
-              <div key={msg.id} className="glass-panel px-5 py-4">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-space-text text-sm leading-relaxed flex-1">{msg.content}</p>
-                  <div className="text-right shrink-0">
-                    {msg.planets?.name && (
-                      <p className="text-xs text-space-blue mb-0.5">→ {msg.planets.name}</p>
-                    )}
-                    <p className="text-xs text-space-muted/50">{timeAgo(msg.created_at)}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )
       ) : (
-        selfies.length === 0 ? (
-          <p className="text-center text-space-muted text-sm py-12">아직 촬영된 사진이 없어요.</p>
-        ) : (
-          <div className="columns-2 sm:columns-3 md:columns-4 gap-3 max-w-4xl mx-auto [column-fill:_balance]">
-            {selfies.map((s, idx) => (
-              <button
-                key={s.id}
-                onClick={() => setLightbox(idx)}
-                className="mb-3 w-full block rounded-xl overflow-hidden border border-space-border bg-space-surface
-                  hover:border-space-blue/50 transition-colors break-inside-avoid"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={s.image_url}
-                  alt="visitor"
-                  className="w-full h-auto block"
-                  loading="lazy"
-                />
-              </button>
-            ))}
-          </div>
-        )
+        <div className="space-y-16">
+          {/* ── 사진 ── */}
+          <section>
+            <h3 className="text-xs tracking-[0.3em] text-space-blue/80 uppercase mb-5 text-center">
+              우주 사진 ({selfies.length})
+            </h3>
+            {selfies.length === 0 ? (
+              <p className="text-center text-space-muted text-sm py-8">아직 촬영된 사진이 없어요.</p>
+            ) : (
+              <div className="columns-2 sm:columns-3 md:columns-4 gap-3 max-w-4xl mx-auto [column-fill:_balance]">
+                {selfies.map((s, idx) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setLightbox(idx)}
+                    className="mb-3 w-full block rounded-xl overflow-hidden border border-space-border bg-space-surface
+                      hover:border-space-blue/50 transition-colors break-inside-avoid"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={s.image_url} alt="visitor" className="w-full h-auto block" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* ── 댓글 ── */}
+          <section>
+            <h3 className="text-xs tracking-[0.3em] text-space-blue/80 uppercase mb-5 text-center">
+              메시지 ({messages.length})
+            </h3>
+
+            {/* 작성 폼 */}
+            <form onSubmit={submitMessage} className="max-w-2xl mx-auto mb-8">
+              <textarea
+                value={msgText}
+                onChange={e => setMsgText(e.target.value)}
+                placeholder="우주에 남기고 싶은 말을 적어보세요..."
+                maxLength={500}
+                rows={3}
+                className="input-field resize-none mb-3"
+              />
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-space-muted">{msgText.length}/500</span>
+                <button type="submit" disabled={posting || !msgText.trim()} className="btn-primary">
+                  {posting ? '남기는 중...' : '메시지 남기기'}
+                </button>
+              </div>
+            </form>
+
+            {messages.length === 0 ? (
+              <p className="text-center text-space-muted text-sm py-8">아직 메시지가 없어요.</p>
+            ) : (
+              <div className="grid gap-3 max-w-2xl mx-auto">
+                {messages.map(msg => (
+                  <div key={msg.id} className="glass-panel px-5 py-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-space-text text-sm leading-relaxed flex-1">{msg.content}</p>
+                      <div className="text-right shrink-0">
+                        {msg.planets?.name && (
+                          <p className="text-xs text-space-blue mb-0.5">→ {msg.planets.name}</p>
+                        )}
+                        <p className="text-xs text-space-muted/50">{timeAgo(msg.created_at)}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
       )}
 
       {/* 라이트박스 */}
@@ -134,7 +167,6 @@ export default function Guestbook() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm"
           onClick={() => setLightbox(null)}
         >
-          {/* 닫기 */}
           <button
             onClick={(e) => { e.stopPropagation(); setLightbox(null) }}
             aria-label="닫기"
@@ -146,7 +178,6 @@ export default function Guestbook() {
             </svg>
           </button>
 
-          {/* 이전 */}
           {selfies.length > 1 && (
             <button
               onClick={(e) => { e.stopPropagation(); showPrev() }}
@@ -160,7 +191,6 @@ export default function Guestbook() {
             </button>
           )}
 
-          {/* 이미지 */}
           <div className="max-w-[90vw] max-h-[85vh] flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -171,7 +201,6 @@ export default function Guestbook() {
             <p className="text-xs text-white/50">{lightbox + 1} / {selfies.length} · {timeAgo(selfies[lightbox].created_at)}</p>
           </div>
 
-          {/* 다음 */}
           {selfies.length > 1 && (
             <button
               onClick={(e) => { e.stopPropagation(); showNext() }}
