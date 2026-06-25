@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import type { Planet } from '@/lib/types'
 import { uploadViaSignedUrl } from '@/lib/upload'
+import ImageCropper from '@/components/admin/ImageCropper'
 
 const TEXT_FIELDS: { key: keyof Planet; label: string; type: 'text' | 'textarea' | 'url' }[] = [
   { key: 'name',            label: 'Planet Name',         type: 'text' },
@@ -22,6 +23,7 @@ function UploadSection({
   currentUrl,
   previewType,
   uploadLabel,
+  cropAspect,
   onUpload,
   onDelete,
 }: {
@@ -31,20 +33,33 @@ function UploadSection({
   currentUrl: string | null
   previewType: 'image' | 'video' | 'audio'
   uploadLabel: string
+  cropAspect?: number
   onUpload: (file: File) => Promise<void>
   onDelete: () => Promise<void>
 }) {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const [cropSource, setCropSource] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0] ?? null
-    setFile(f)
     setMsg('')
+    if (f && cropAspect) {
+      // 크롭 모달 띄우기 (업로드 파일은 크롭 후 확정)
+      setCropSource(f)
+      return
+    }
+    setFile(f)
     setPreview(f ? URL.createObjectURL(f) : null)
+  }
+
+  function onCropConfirm(cropped: File) {
+    setFile(cropped)
+    setPreview(URL.createObjectURL(cropped))
+    setCropSource(null)
   }
 
   async function handleUpload() {
@@ -160,6 +175,15 @@ function UploadSection({
         <p className={`mt-3 text-xs ${msg.startsWith('오류') ? 'text-space-danger' : 'text-space-success'}`}>
           {msg}
         </p>
+      )}
+
+      {cropSource && cropAspect && (
+        <ImageCropper
+          file={cropSource}
+          aspect={cropAspect}
+          onConfirm={onCropConfirm}
+          onCancel={() => { setCropSource(null); if (inputRef.current) inputRef.current.value = '' }}
+        />
       )}
     </div>
   )
@@ -287,6 +311,7 @@ export default function PlanetEditPage() {
         currentUrl={planet.texture_url}
         previewType="image"
         uploadLabel="3D 텍스처 적용"
+        cropAspect={2}
         onUpload={uploadTexture}
         onDelete={deleteTexture}
       />
