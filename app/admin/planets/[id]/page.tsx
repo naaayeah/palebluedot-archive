@@ -6,6 +6,7 @@ import Link from 'next/link'
 import type { Planet } from '@/lib/types'
 import { uploadViaSignedUrl } from '@/lib/upload'
 import ImageCropper from '@/components/admin/ImageCropper'
+import { titleStyle } from '@/lib/fonts'
 
 const TEXT_FIELDS: { key: keyof Planet; label: string; type: 'text' | 'textarea' | 'url' }[] = [
   { key: 'name',            label: 'Planet Name',         type: 'text' },
@@ -294,10 +295,7 @@ export default function PlanetEditPage() {
         </Link>
         <div className="mt-3">
           <p className="text-xs tracking-[0.3em] text-space-blue uppercase mb-2">Planet Editor</p>
-          <h1
-            className="text-3xl text-space-text"
-            style={{ fontFamily: '"Times New Roman", Georgia, serif', fontStyle: 'italic', fontWeight: 'bold' }}
-          >
+          <h1 className="text-3xl text-space-text" style={titleStyle(planet.name)}>
             {planet.name}
           </h1>
         </div>

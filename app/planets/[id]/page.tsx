@@ -4,6 +4,7 @@ import { createAnonClient } from '@/lib/supabase-server'
 import StarField from '@/components/public/StarField'
 import PlanetInteractions from '@/components/public/PlanetInteractions'
 import PlanetMedia from '@/components/public/PlanetMedia'
+import { titleStyle } from '@/lib/fonts'
 import type { Planet, PlanetMessage, PlanetPhoto } from '@/lib/types'
 
 interface Props { params: { id: string } }
@@ -59,10 +60,7 @@ export default async function PlanetPage({ params }: Props) {
               {planet.distance}
             </p>
           )}
-          <h1
-            className="text-5xl text-space-text mb-2"
-            style={{ fontFamily: '"Times New Roman", Georgia, serif', fontStyle: 'italic', fontWeight: 'bold' }}
-          >
+          <h1 className="text-5xl text-space-text mb-2" style={titleStyle(planet.name)}>
             {planet.name}
           </h1>
           {planet.subtitle && (
