@@ -41,8 +41,8 @@ export default async function HomePage() {
         <SoundToggle />
       </div>
 
-      {/* ── 네비게이션 버튼 (화면 중앙) ── */}
-      <nav className="absolute top-[56%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20
+      {/* ── 네비게이션 버튼 (하단) ── */}
+      <nav className="absolute bottom-16 left-1/2 -translate-x-1/2 z-20
         flex flex-col sm:flex-row gap-4 items-center">
         <Link
           href="/camera"
