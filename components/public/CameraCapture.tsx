@@ -81,9 +81,14 @@ export default function CameraCapture({ spaceImages = [] }: { spaceImages?: stri
     // 실제 사진 업로드
     canvas.toBlob(async (blob) => {
       if (blob) {
-        const fd = new FormData()
-        fd.append('file', blob, 'selfie.jpg')
-        await fetch('/api/public/selfie', { method: 'POST', body: fd }).catch(() => {})
+        try {
+          const fd = new FormData()
+          fd.append('file', blob, 'selfie.jpg')
+          const res = await fetch('/api/public/selfie', { method: 'POST', body: fd })
+          if (!res.ok) setError('사진 저장에 실패했어요. 네트워크를 확인하고 다시 시도해주세요.')
+        } catch {
+          setError('사진 저장에 실패했어요. 네트워크를 확인하고 다시 시도해주세요.')
+        }
       }
 
       // 결과 화면 먼저 보여주고, 캔버스가 DOM에 그려진 뒤 그리기
@@ -309,6 +314,7 @@ export default function CameraCapture({ spaceImages = [] }: { spaceImages?: stri
           <div className="text-center mb-2">
             <p className="text-xs tracking-[0.3em] text-space-blue uppercase mb-2">Transmission Received</p>
             <p className="text-sm text-space-muted">우주에서 당신을 발견했습니다.</p>
+            {error && <p className="text-xs text-space-danger mt-2">{error}</p>}
           </div>
           <div className="w-full rounded-2xl overflow-hidden border border-space-border">
             <canvas
